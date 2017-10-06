@@ -1,0 +1,333 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+
+require 'octokit'
+require 'pp'
+require 'date'
+require 'set'
+require 'yaml'
+
+require_relative './template_helpers'
+
+MAX_PRS = 50
+MAX_COMMITS = 150
+
+#
+# Represents a project on Github like the Kernel who lives in
+# `redox-os/kernel`
+#
+class Project
+  attr_accessor :name, :description, :repo, :contributions
+
+  def initialize(name:, description:, repo:, contributions:)
+    @name = name
+    @description = description
+    @repo = repo
+    @contributions = contributions
+  end
+end
+
+# Represents a contribution to a given project
+class Contribution
+  include Comparable
+
+  attr_accessor :author, :description, :date, :url
+
+  def initialize(author:, description:, date:, url:)
+    @author = author
+    @description = description
+    @date = date.to_datetime
+    @url = url
+  end
+
+  def <=>(other)
+    @date <=> other.date
+  end
+end
+
+#
+# Gets the contributions from PRs and returns a tuple (Array really)
+# with the contributions found and with the commits insidie those PRs
+# so we can skip them and don't overcount when calculating contributions
+# from direct (non-PR) commits
+#
+def contribs_prs(repo, since)
+  contributions = []
+  commits_to_exclude = Set.new
+
+  options = {
+    sort: :created,
+    state: :closed,
+    direction: :desc,
+    per_page: MAX_PRS
+  }
+
+  @client.pull_requests(repo, options).each do |pr|
+    date = pr[:created_at].utc.to_datetime
+    break if date < since
+
+    @client.pull_commits(repo, pr[:number], per_page: MAX_COMMITS).map(&:sha).each do |commit|
+      commits_to_exclude.add commit
+    end
+
+    description = pr[:title]
+    author = pr[:user][:login]
+    url = pr[:html_url]
+
+    contributions << Contribution.new(
+      author: author,
+      description: description,
+      date: date,
+      url: url
+    )
+  end
+
+  [contributions, commits_to_exclude]
+end
+
+#
+# Gets contributions from non-PR AKA direct commits to a given repo
+# receives the :repo: name the start date and an optional list of commits
+# to exclude, used mainly to skip commits seen inside PRs so we
+# don't overcount
+#
+def contribs_direct_commits(repo, since, commits_to_exclude: nil)
+  contributions = []
+
+  @client.commits_since(repo, since, per_page: MAX_COMMITS).each do |commit|
+    next if commits_to_exclude && commits_to_exclude.include?(commit[:sha])
+
+    description = commit[:commit][:message]
+    next if description =~ /Merge pull request \#(\d+)/
+    next if description =~ /Merge branch '(.*)'/
+
+    author = commit[:author][:login]
+    date = commit[:commit][:author][:date]
+    url = commit[:html_url]
+
+    contributions << Contribution.new(
+      author: author,
+      description: description,
+      date: date,
+      url: url
+    )
+  end
+
+  contributions
+end
+
+#
+# Gets all the contributors for the given set of repos
+#
+def fetch_all_contributors(repos:, save: false)
+  contributors = []
+
+  repos.each do |repo|
+    contributor_stats = @client.contributors_stats(repo[:repo])
+    contributors += contributor_stats.map(&:author) rescue []
+  end
+
+  contributors = contributors.compact.map(&:login).uniq.sort
+
+  if save
+    file = File.open('./all_contributors.yml', 'w')
+    file.write(YAML.dump(contributors))
+  end
+
+  contributors
+end
+
+def all_contributors
+  YAML.load(File.open('./all_contributors.yml').read)
+end
+
+#
+# Calculates the contributions for a given set of repos
+#
+def all_contributions(repos, since)
+  projects = []
+
+  repos.each do |repo|
+    next unless repo[:twir]
+    repo = repo[:repo]
+
+    puts "Getting contributions for #{repo}..."
+    proj_data = @client.repository(repo)
+    contribs_from_prs, commits_to_exclude = contribs_prs(repo, since)
+    direct_contribs = contribs_direct_commits(repo, since, commits_to_exclude: commits_to_exclude)
+    contributions = contribs_from_prs + direct_contribs
+    contributions.sort!
+
+    projects << Project.new(
+      name: proj_data[:name],
+      description: proj_data[:description],
+      repo: repo,
+      contributions: contributions
+    )
+  end
+
+  projects
+end
+
+def new_contributors(projects)
+  twir_contributors = projects.map(&:contributions).flatten.map(&:author).uniq
+  new_contributors = []
+
+  twir_contributors.each do |contributor|
+    new_contributors << contributor unless all_contributors.include?(contributor)
+  end
+
+  new_contributors
+end
+
+#
+# Represents an issue/edition of TWiR
+#
+class TWIR
+  include TemplateHelpers
+
+  attr_accessor :author, :issue_number, :date, :projects, :new_contributors
+
+  def initialize(author:, title: nil, issue_number:, projects:, new_contributors:)
+    @author = author
+    @title = title || "This Week in Redox #{issue_number}"
+    @issue_number = issue_number
+    @date = Time.now
+    @projects = projects
+    @new_contributors = new_contributors
+  end
+
+  def context
+    binding
+  end
+end
+
+require 'optparse'
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = <<~BANNER
+    NAME
+    twir -- generates an issue of "This Week in Redox"
+
+    SYNOPSIS
+
+    twir -t TOKEN -i NUMBER --s SINCE --a AUTHOR [-c CONTRIBUTORS_DB] [-t TEMPLATE] [-o OUTPUT_FILE] [-r REPOS_FILE] [-v]
+    twir --token TOKEN --issue_number NUMBER --since SINCE --author AUTHOR [--contributors-db CONTRIBUTORS_DB] [--template TEMPLATE]  [--output-file OUTPUT_FILE] [--repos-file REPOS_FILE] [--verbose]
+    twir [--help]
+
+    DESCRIPTION
+
+    Connects to github and generates a Markdown file containing the constributions made to diverse
+    Redox projects.
+
+    OPTIONS
+  BANNER
+
+  token_msg = "Github acesss token."
+  opts.on("-tTOKEN", "--tokenTOKEN", token_msg) do |t|
+    options[:access_token] = t
+  end
+
+  verbose_msg = "Run the utility printinng setep buy step messages about progress."
+  opts.on("-v", "--verbose", verbose_msg) do |v|
+    options[:verbose] = v
+  end
+
+  repos_file_msg = "YAML file containing the list of Github repositories to be scanned. Defaults to 'repos.yml'."
+  opts.on("-rREPOS_FILE", "--reposfileREPOS_FILE", repos_file_msg) do |r|
+    options[:repos_file] = r
+  end
+
+  contribs_db_msg = "YAML file with the all-time contributors. When calculating the new contributors a DB with
+  the all-time list of contributors before the date when this command is run. Defaults to 'all_contributors.yml'"
+  opts.on("-cCONTRIBUTORS_DB", "--contributors-dbCONTRIBUTORS_DB", contribs_db_msg) do |c|
+    options[:contributor_file] = c
+  end
+
+  since_msg = "The start date for counting contributions."
+  opts.on("-sSINCE", "--sinceSINCE", since_msg) do |s|
+    options[:since] = Date.parse(s)
+  end
+
+  author_msg = "The Github handle of the user that will appear on the generated TWiR issue."
+  opts.on("-aAUTHOR", "--authorAUTHOR", author_msg) do |a|
+    options[:author] = a
+  end
+
+  template_msg = "The ERB template file used to generate the TWiR. Defaults to './templates/twir.md.erb'."
+  opts.on("-pTEMPLATE", "--templateTEMPLATE", template_msg) do |t|
+    options[:template_file] = t
+  end
+
+  issue_number_msg = "The issue number for the 'This Week in Redox ISSUE_NUMBER' part."
+  opts.on("-iISSUE_NUMBER", "--issue_numberiISSUE_NUMBE", issue_number_msg) do |t|
+    options[:issue_number] = t
+  end
+
+  output_file_msg = "The output file name. Defualts to 'this-week-in-redox-ISSUE_NUMBER'."
+  opts.on("-oOUTPUT_FILE", "--output-fileOUTPUT_FILE", output_file_msg) do |o|
+    options[:output_file] = o
+  end
+end.parse!
+
+require 'erb'
+
+DEFAULT_TEMPLATE_FILE = './templates/twir.md.erb'.freeze
+DEFAULT_REPOS_FILE = './repos.yml'.freeze
+
+unless options[:access_token]
+  puts "twir: missing Github access token."
+  exit(1)
+end
+
+@client = Octokit::Client.new(access_token: options[:access_token])
+
+repos_file = File.open(DEFAULT_REPOS_FILE || options[:repos_file])
+unless repos_file
+  puts "twir: missing repos file."
+  exit(1)
+end
+
+author = options[:author]
+unless author
+  puts "twir: missing author."
+  exit(1)
+end
+
+since = options[:since]
+unless since
+  puts "twir: missing since. Pick a start date."
+  exit(1)
+end
+
+unless options[:issue_number]
+  puts "twir: missing issue number."
+  exit(1)
+end
+
+template_file_path = DEFAULT_TEMPLATE_FILE || options[:template_file]
+unless template_file_path
+  puts "twir: missing template file."
+  exit(1)
+end
+
+template_file = File.open(template_file_path)
+template_str = template_file.read
+renderer = ERB.new(template_str, 0, '>')
+repos = YAML.load(repos_file.read)
+issue_number = options[:issue_number]
+
+projects = all_contributions(repos, since)
+twir = TWIR.new(
+  author: author,
+  issue_number: issue_number.to_i,
+  projects: projects,
+  new_contributors: new_contributors(projects)
+)
+
+output_file_name = options[:output_file] || "this-week-in-redox-#{twir.issue_number}.md"
+output_file = File.open(output_file_name, 'w')
+rendered_twir = renderer.result(twir.context)
+output_file.write(rendered_twir)

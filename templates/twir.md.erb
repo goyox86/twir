@@ -1,0 +1,53 @@
++++
+title = "<%= @title + "\n" %>"
+author = "<%= @author + "\n" %>"
+date = "<%= @date.to_s + "\n" %>"
++++
+
+This is the <%= ordinalize(@issue_number) %> post of a series of blog posts tracking the development and progress of Redox, the Rust operating system. If you want to know more about Redox in general, visit our [Github page](https://github.com/redox-os/redox).
+
+*(edited by <%= user_link(@author) %>)*
+
+# PSA
+
+If you have any questions, ideas, or are curious about Redox, we recommend joining `#redox` on `irc.mozilla.org`, [our Discourse forum](https://discourse.redox-os.org/) or you can get an invite to our chat by sending an email request to `info@redox-os.org`.
+
+# What's new in Redox?
+
+## TL;DR
+
+There is now way we could generate this automatically so FILL ME!
+
+<% @projects.each do |project| %>
+## <%= project.name.strip + "\n\n" %>
+<%= project.description.strip + "\n\n" %>
+<% project.contributions.each do |contrib|%>
+- <%= user_link(contrib.author) %> <%= beautify_desc(contrib.description) %>. Details [here](<%= contrib.url %>).
+<%end%>
+
+<%end%>
+
+# Handy links
+
+1. [The Glorious Book](https://doc.redox-os.org/book/)
+2. [The Holiest Forum](https://discourse.redox-os.org/)
+3. [The Shiny ISOs](https://github.com/redox-os/redox/releases)
+4. [Redocs](http://www.redox-os.org/docs/)
+5. [Fancy GitHub organization](https://github.com/redox-os)
+6. [Our Holy Grail of a Website](http://www.redox-os.org/)
+7. [The Extreme Screenshots](http://www.redox-os.org/screens/)
+
+# New contributors
+<% if @new_contributors.empty? %>
+There were not new contributors this week!
+<% else %> 
+Since the list of contributors are growing too fast, we'll now only list the new contributors. This might change in the future.
+
+Sorted in alphabetical order.
+
+<% @new_contributors.each do |contributor| %>
+- <%= user_link(contributor) %> 🎂
+<%end%>
+<%end%>
+
+If I missed something, feel free to contact me <%= user_link(@author) %> or send a PR to [Redox website](https://github.com/redox-os/website).
