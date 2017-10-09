@@ -2,11 +2,13 @@
 
 require 'bundler/setup'
 
-require 'octokit'
 require 'pp'
 require 'date'
 require 'set'
 require 'yaml'
+
+require 'octokit'
+require 'tty-spinner'
 
 require_relative './template_helpers'
 
@@ -52,9 +54,9 @@ end
 # so we can skip them and don't overcount when calculating contributions
 # from direct (non-PR) commits
 #
-def contribs_prs(repo, since)
+def contribs_prs(repo:, since:)
   contributions = []
-  commits_to_exclude = Set.new
+  commits = Set.new
 
   options = {
     sort: :created,
@@ -68,7 +70,7 @@ def contribs_prs(repo, since)
     break if date < since
 
     @client.pull_commits(repo, pr[:number], per_page: MAX_COMMITS).map(&:sha).each do |commit|
-      commits_to_exclude.add commit
+      commits.add commit
     end
 
     description = pr[:title]
@@ -83,7 +85,7 @@ def contribs_prs(repo, since)
     )
   end
 
-  [contributions, commits_to_exclude]
+  [contributions, commits]
 end
 
 #
@@ -92,7 +94,7 @@ end
 # to exclude, used mainly to skip commits seen inside PRs so we
 # don't overcount
 #
-def contribs_direct_commits(repo, since, commits_to_exclude: nil)
+def contribs_direct_commits(repo:, since:, commits_to_exclude: nil)
   contributions = []
 
   @client.commits_since(repo, since, per_page: MAX_COMMITS).each do |commit|
@@ -148,14 +150,22 @@ end
 def all_contributions(repos, since)
   projects = []
 
+  spinner = TTY::Spinner.new("[:spinner] :title", format: :pulse_2)
+
   repos.each do |repo|
     next unless repo[:twir]
     repo = repo[:repo]
 
-    puts "Getting contributions for #{repo}..."
+    spinner.update(title: "Getting contributions for #{repo}...")
+    spinner.auto_spin
+
     proj_data = @client.repository(repo)
-    contribs_from_prs, commits_to_exclude = contribs_prs(repo, since)
-    direct_contribs = contribs_direct_commits(repo, since, commits_to_exclude: commits_to_exclude)
+    contribs_from_prs, commits_to_exclude = contribs_prs(repo: repo, since: since)
+    direct_contribs = contribs_direct_commits(
+      repo: repo,
+      since: since,
+      commits_to_exclude: commits_to_exclude
+    )
     contributions = contribs_from_prs + direct_contribs
     contributions.sort!
 
@@ -166,6 +176,8 @@ def all_contributions(repos, since)
       contributions: contributions
     )
   end
+
+  spinner.stop('Done!')
 
   projects
 end
@@ -207,7 +219,7 @@ require 'optparse'
 
 options = {}
 OptionParser.new do |opts|
-  opts.banner = <<~BANNER
+  opts.banner =<<~BANNER
     NAME
     twir -- generates an issue of "This Week in Redox"
 
@@ -320,14 +332,20 @@ repos = YAML.load(repos_file.read)
 issue_number = options[:issue_number]
 
 projects = all_contributions(repos, since)
+new_contributors = new_contributors(projects)
 twir = TWIR.new(
   author: author,
   issue_number: issue_number.to_i,
   projects: projects,
-  new_contributors: new_contributors(projects)
+  new_contributors: new_contributors
 )
 
 output_file_name = options[:output_file] || "this-week-in-redox-#{twir.issue_number}.md"
 output_file = File.open(output_file_name, 'w')
 rendered_twir = renderer.result(twir.context)
 output_file.write(rendered_twir)
+
+updated_contributors_file = File.open('./all_contributors_updated.yml', 'w')
+updated_contributors_file.write(YAML.dump(all_contributors + new_contributors))
+File.rename('./all_contributors.yml', './all_contributors.yml.old')
+File.rename('./all_contributors_updated.yml', './all_contributors.yml')

@@ -16,6 +16,9 @@ GEM
     sawyer (0.8.1)
       addressable (>= 2.3.5, < 2.6)
       faraday (~> 0.8, < 1.0)
+    tty-cursor (0.5.0)
+    tty-spinner (0.7.0)
+      tty-cursor (>= 0.5.0)
 
 PLATFORMS
   ruby
@@ -24,6 +27,7 @@ DEPENDENCIES
   byebug
   octokit (~> 4.0)
   ordinalize_full (~> 1.1, >= 1.1.1)
+  tty-spinner
 
 BUNDLED WITH
    1.14.6
