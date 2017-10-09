@@ -4,21 +4,39 @@ GEM
     addressable (2.5.2)
       public_suffix (>= 2.0.2, < 4.0)
     byebug (9.0.6)
+    equatable (0.5.0)
     faraday (0.13.1)
       multipart-post (>= 1.2, < 3)
+    hitimes (1.2.6)
     i18n (0.7.0)
     multipart-post (2.0.0)
+    necromancer (0.4.0)
     octokit (4.7.0)
       sawyer (~> 0.8.0, >= 0.5.3)
     ordinalize_full (1.4.0)
       i18n (~> 0.7.0)
+    pastel (0.7.1)
+      equatable (~> 0.5.0)
+      tty-color (~> 0.4.0)
     public_suffix (3.0.0)
     sawyer (0.8.1)
       addressable (>= 2.3.5, < 2.6)
       faraday (~> 0.8, < 1.0)
+    timers (4.1.2)
+      hitimes
+    tty-color (0.4.2)
     tty-cursor (0.5.0)
+    tty-prompt (0.13.2)
+      necromancer (~> 0.4.0)
+      pastel (~> 0.7.0)
+      timers (~> 4.1.2)
+      tty-cursor (~> 0.5.0)
+      tty-reader (~> 0.1.0)
+    tty-reader (0.1.0)
+      wisper (~> 2.0.0)
     tty-spinner (0.7.0)
       tty-cursor (>= 0.5.0)
+    wisper (2.0.0)
 
 PLATFORMS
   ruby
@@ -27,6 +45,7 @@ DEPENDENCIES
   byebug
   octokit (~> 4.0)
   ordinalize_full (~> 1.1, >= 1.1.1)
+  tty-prompt
   tty-spinner
 
 BUNDLED WITH

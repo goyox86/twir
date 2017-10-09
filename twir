@@ -8,6 +8,7 @@ require 'set'
 require 'yaml'
 
 require 'octokit'
+require 'tty-prompt'
 require 'tty-spinner'
 
 require_relative './template_helpers'
@@ -225,8 +226,13 @@ OptionParser.new do |opts|
 
     SYNOPSIS
 
-    twir -t TOKEN -i NUMBER --s SINCE --a AUTHOR [-c CONTRIBUTORS_DB] [-t TEMPLATE] [-o OUTPUT_FILE] [-r REPOS_FILE] [-v]
-    twir --token TOKEN --issue_number NUMBER --since SINCE --author AUTHOR [--contributors-db CONTRIBUTORS_DB] [--template TEMPLATE]  [--output-file OUTPUT_FILE] [--repos-file REPOS_FILE] [--verbose]
+    twir -t TOKEN -i NUMBER --s SINCE --a AUTHOR [-c CONTRIBUTORS_DB] [-t TEMPLATE] [-o OUTPUT_FILE] [-r REPOS_FILE] [-uv]
+    twir --token TOKEN --issue_number NUMBER --since SINCE --author AUTHOR [--contributors-db CONTRIBUTORS_DB] 
+        [--template TEMPLATE]
+        [--output-file OUTPUT_FILE]
+        [--repos-file REPOS_FILE]
+        [--verbose]
+        [--update-contributors-db]
     twir [--help]
 
     DESCRIPTION
@@ -281,6 +287,11 @@ OptionParser.new do |opts|
   output_file_msg = "The output file name. Defualts to 'this-week-in-redox-ISSUE_NUMBER'."
   opts.on("-oOUTPUT_FILE", "--output-fileOUTPUT_FILE", output_file_msg) do |o|
     options[:output_file] = o
+  end
+
+  update_contribs_db_msg = "Update the all-time contributors DB with the new contributors found."
+  opts.on("-u", "--update_contributors-db", update_contribs_db_msg) do |u|
+    options[:update_contributors_db] = u
   end
 end.parse!
 
@@ -345,7 +356,10 @@ output_file = File.open(output_file_name, 'w')
 rendered_twir = renderer.result(twir.context)
 output_file.write(rendered_twir)
 
-updated_contributors_file = File.open('./all_contributors_updated.yml', 'w')
-updated_contributors_file.write(YAML.dump(all_contributors + new_contributors))
-File.rename('./all_contributors.yml', './all_contributors.yml.old')
-File.rename('./all_contributors_updated.yml', './all_contributors.yml')
+prompt = TTY::Prompt.new
+if !options[:update_contributors_db] && prompt.yes?('Do you want to save the new contributors to the DB?')
+  updated_contributors_file = File.open('./all_contributors_updated.yml', 'w')
+  updated_contributors_file.write(YAML.dump(all_contributors + new_contributors))
+  File.rename('./all_contributors.yml', './all_contributors.yml.old')
+  File.rename('./all_contributors_updated.yml', './all_contributors.yml')
+end
