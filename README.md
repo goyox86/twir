@@ -36,27 +36,16 @@ That says: Take the Github personal token `aaaaaaabbbbbbcccc11111222233344` use 
 Options
 -------
 
-- -t | --token TOKEN]
-  Github access token.
-- [-v | --verbose]
-  Run the utility printinng setep buy step messages about progress.
-- [-r | --repos-file] REPOS_FILE
-  YAML file containing the list of Github repositories to be scanned. Defaults to 'repos.yml'.
-- [-c | --contributors-db] CONTRIBUTORS_DB
-  YAML file with the all-time contributors. When calculating the new contributors a DB with
-  the all-time list of contributors before the date when this command is run. Defaults to 'all_contributors.yml'
-- [-s | --since] SINCE
-  The start date for counting contributions.
-- [-a | --author] AUTHOR
-  The Github handle of the user that will appear on the generated TWiR issue.
-- [-p | --template] TEMPLATE
-  The ERB template file used to generate the TWiR. Defaults to './templates/twir.md.erb'.
-- [-i | --issue-number] ISSUE_NUMBER
-  The TWiR issue number.
-- [-o | --output-file] OUTPUT_FILE
-  The output file name. Defaults to 'this-week-in-redox-ISSUE_NUMBER'.
-- [-u |  --update_contributors-db]
-  Update the all-time contributors DB with the new contributors just found.
+- `[-t | --token] TOKEN`: Github access token.
+- `[-v | --verbose]`: Run the utility printinng setep buy step messages about progress.
+- `[-r | --repos-file] REPOS_FILE`: YAML file containing the list of Github repositories to be scanned. Defaults to 'repos.yml'.
+- `[-c | --contributors-db] CONTRIBUTORS_DB` :YAML file with the all-time contributors. When calculating the new contributors a DB with the all-time list of contributors before the date when this command is run. Defaults to 'all_contributors.yml'
+- `[-s | --since] SINCE`: The start date for counting contributions.
+- `[-a | --author] AUTHOR`: The Github handle of the user that will appear on the generated TWiR issue.
+- `[-p | --template] TEMPLATE`: The ERB template file used to generate the TWiR. Defaults to './templates/twir.md.erb'.
+- `[-i | --issue-number]` ISSUE_NUMBER: The TWiR issue number.
+- `[-o | --output-file]` OUTPUT_FILE: The output file name. Defaults to 'this-week-in-redox-ISSUE_NUMBER'.
+- `[-u |  --update_contributors-db]`: Update the all-time contributors DB with the new contributors just found.
        
 [License](LICENSE)
 ------------------
