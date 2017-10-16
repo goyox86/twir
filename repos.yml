@@ -1,4 +1,8 @@
 ---
+- :repo: redox-os/redox
+  :twir: true
+- :repo: redox-os/bootloader
+  :twir: true
 - :repo: redox-os/acid
   :twir: false
 - :repo: redox-os/binutils
@@ -31,6 +35,8 @@
   :twir: false
 - :repo: redox-os/pkgutils
   :twir: true
+- :repo: redox-os/orbterm
+  :twir: true
 - :repo: redox-os/playbot
   :twir: false
 - :repo: redox-os/ralloc
@@ -42,7 +48,7 @@
 - :repo: redox-os/syscall
   :twir: true
 - :repo: redox-os/sodium
-  :twir: false
+  :twir: true
 - :repo: redox-os/userutils
   :twir: true
 - :repo: redox-os/coreutils
@@ -55,7 +61,13 @@
   :twir: false
 - :repo: redox-os/tfs
   :twir: true
+- :repo: redox-os/newlib
+  :twir: true
 - :repo: redox-os/extrautils
   :twir: false
 - :repo: redox-os/book
+  :twir: false
+- :repo: redox-os/ptyd
+  :twir: false
+- :repo: redox-os/initd
   :twir: false

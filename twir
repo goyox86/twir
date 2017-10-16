@@ -2,8 +2,9 @@
 
 require 'bundler/setup'
 
-require 'pp'
 require 'date'
+require 'erb'
+require 'optparse'
 require 'set'
 require 'yaml'
 
@@ -15,6 +16,10 @@ require_relative './template_helpers'
 
 MAX_PRS = 50
 MAX_COMMITS = 150
+DEFAULT_TEMPLATE_FILE = './templates/twir.md.erb'.freeze
+DEFAULT_REPOS_FILE = './repos.yml'.freeze
+DEFAULT_CONTRIBUTORS_DB_FILE = './all_contributors.yml'.freeze
+
 
 #
 # Represents a project on Github like the Kernel who lives in
@@ -216,7 +221,15 @@ class TWIR
   end
 end
 
-require 'optparse'
+#
+# Updates the contributors DB
+#
+def update_contributors_db(new_contributors)
+  updated_contributors_file = File.open('./all_contributors_updated.yml', 'w')
+  updated_contributors_file.write(YAML.dump(new_contributors))
+  File.rename(DEFAULT_CONTRIBUTORS_DB_FILE, DEFAULT_CONTRIBUTORS_DB_FILE + '.bkp')
+  File.rename('./all_contributors_updated.yml', DEFAULT_CONTRIBUTORS_DB_FILE)
+end
 
 options = {}
 OptionParser.new do |opts|
@@ -295,18 +308,12 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-require 'erb'
-
-DEFAULT_TEMPLATE_FILE = './templates/twir.md.erb'.freeze
-DEFAULT_REPOS_FILE = './repos.yml'.freeze
-
 unless options[:access_token]
   puts "twir: missing Github access token."
   exit(1)
 end
 
 @client = Octokit::Client.new(access_token: options[:access_token])
-
 repos_file = File.open(DEFAULT_REPOS_FILE || options[:repos_file])
 unless repos_file
   puts "twir: missing repos file."
@@ -357,9 +364,10 @@ rendered_twir = renderer.result(twir.context)
 output_file.write(rendered_twir)
 
 prompt = TTY::Prompt.new
-if !options[:update_contributors_db] && prompt.yes?('Do you want to save the new contributors to the DB?')
-  updated_contributors_file = File.open('./all_contributors_updated.yml', 'w')
-  updated_contributors_file.write(YAML.dump(all_contributors + new_contributors))
-  File.rename('./all_contributors.yml', './all_contributors.yml.old')
-  File.rename('./all_contributors_updated.yml', './all_contributors.yml')
+if options[:update_contributors_db]
+  update_contributors_db(all_contributors + new_contributors)
+elsif !options[:update_contributors_db] && prompt.yes?('Do you want to save the new contributors to the DB?')
+  update_contributors_db(all_contributors + new_contributors)
+else
+  puts "Contributors DB was not updated."
 end
