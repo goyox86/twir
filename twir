@@ -257,52 +257,51 @@ OptionParser.new do |opts|
   BANNER
 
   token_msg = "Github acesss token."
-  opts.on("-tTOKEN", "--tokenTOKEN", token_msg) do |t|
+  opts.on("-tTOKEN", "--token=TOKEN", token_msg) do |t|
     options[:access_token] = t
   end
 
-  verbose_msg = "Run the utility printinng setep buy step messages about progress."
+  verbose_msg = "Run the utility printing setep buy step messages about progress."
   opts.on("-v", "--verbose", verbose_msg) do |v|
     options[:verbose] = v
   end
 
-  repos_file_msg = "YAML file containing the list of Github repositories to be scanned. Defaults to 'repos.yml'."
-  opts.on("-rREPOS_FILE", "--reposfileREPOS_FILE", repos_file_msg) do |r|
+  repos_file_msg = "YAML file containing the list of Github repositories to be scanned. Defaults to './repos.yml'."
+  opts.on("-rREPOS_FILE", "--repos-file=REPOS_FILE", repos_file_msg) do |r|
     options[:repos_file] = r
   end
 
-  contribs_db_msg = "YAML file with the all-time contributors. When calculating the new contributors a DB with
-  the all-time list of contributors before the date when this command is run. Defaults to 'all_contributors.yml'"
-  opts.on("-cCONTRIBUTORS_DB", "--contributors-dbCONTRIBUTORS_DB", contribs_db_msg) do |c|
+  contribs_db_msg = "YAML file with the all-time contributors. Used when calculating the new contributors: a DB with the all-time list of contributors before the date when this command is run. Defaults to './all_contributors.yml'"
+  opts.on("-cCONTRIBUTORS_DB", "--contributors-db=CONTRIBUTORS_DB", contribs_db_msg) do |c|
     options[:contributor_file] = c
   end
 
   since_msg = "The start date for counting contributions."
-  opts.on("-sSINCE", "--sinceSINCE", since_msg) do |s|
+  opts.on("-sSINCE", "--since=SINCE", since_msg) do |s|
     options[:since] = Date.parse(s)
   end
 
-  author_msg = "The Github handle of the user that will appear on the generated TWiR issue."
-  opts.on("-aAUTHOR", "--authorAUTHOR", author_msg) do |a|
+  author_msg = "The Github handle of the user that will appear as author/editor on the generated TWiR issue."
+  opts.on("-aAUTHOR", "--author=AUTHOR", author_msg) do |a|
     options[:author] = a
   end
 
   template_msg = "The ERB template file used to generate the TWiR. Defaults to './templates/twir.md.erb'."
-  opts.on("-pTEMPLATE", "--templateTEMPLATE", template_msg) do |t|
+  opts.on("-pTEMPLATE", "--template=TEMPLATE", template_msg) do |t|
     options[:template_file] = t
   end
 
   issue_number_msg = "The issue number for the 'This Week in Redox ISSUE_NUMBER' part."
-  opts.on("-iISSUE_NUMBER", "--issue_numberiISSUE_NUMBE", issue_number_msg) do |t|
+  opts.on("-iISSUE_NUMBER", "--issue_number=ISSUE_NUMBER", issue_number_msg) do |t|
     options[:issue_number] = t
   end
 
   output_file_msg = "The output file name. Defualts to 'this-week-in-redox-ISSUE_NUMBER'."
-  opts.on("-oOUTPUT_FILE", "--output-fileOUTPUT_FILE", output_file_msg) do |o|
+  opts.on("-oOUTPUT_FILE", "--output-file=OUTPUT_FILE", output_file_msg) do |o|
     options[:output_file] = o
   end
 
-  update_contribs_db_msg = "Update the all-time contributors DB with the new contributors found."
+  update_contribs_db_msg = "Update the all-time contributors DB with the new contributors just found."
   opts.on("-u", "--update_contributors-db", update_contribs_db_msg) do |u|
     options[:update_contributors_db] = u
   end
@@ -322,7 +321,7 @@ end
 
 author = options[:author]
 unless author
-  puts "twir: missing author."
+  puts "twir: missing author/editor."
   exit(1)
 end
 
@@ -363,11 +362,13 @@ output_file = File.open(output_file_name, 'w')
 rendered_twir = renderer.result(twir.context)
 output_file.write(rendered_twir)
 
-prompt = TTY::Prompt.new
-if options[:update_contributors_db]
-  update_contributors_db(all_contributors + new_contributors)
-elsif !options[:update_contributors_db] && prompt.yes?('Do you want to save the new contributors to the DB?')
-  update_contributors_db(all_contributors + new_contributors)
-else
-  puts "Contributors DB was not updated."
+unless new_contributors.empty?
+  prompt = TTY::Prompt.new
+  if options[:update_contributors_db]
+    update_contributors_db(all_contributors + new_contributors)
+  elsif !options[:update_contributors_db] && prompt.yes?('Do you want to save the new contributors to the DB?')
+    update_contributors_db(all_contributors + new_contributors)
+  else
+    puts "Contributors DB was not updated."
+  end
 end
