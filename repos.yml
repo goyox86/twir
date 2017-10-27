@@ -42,7 +42,7 @@
 - :repo: redox-os/ralloc
   :twir: false
 - :repo: redox-os/ransid
-  :twir: false
+  :twir: true
 - :repo: redox-os/redoxfs
   :twir: true
 - :repo: redox-os/syscall

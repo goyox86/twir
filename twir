@@ -175,12 +175,14 @@ def all_contributions(repos, since)
     contributions = contribs_from_prs + direct_contribs
     contributions.sort!
 
-    projects << Project.new(
-      name: proj_data[:name],
-      description: proj_data[:description],
-      repo: repo,
-      contributions: contributions
-    )
+    if contributions.any?
+      projects << Project.new(
+        name: proj_data[:name],
+        description: proj_data[:description],
+        repo: repo,
+        contributions: contributions
+      )
+    end
   end
 
   spinner.stop('Done!')
@@ -240,7 +242,7 @@ OptionParser.new do |opts|
     SYNOPSIS
 
     twir -t TOKEN -i NUMBER --s SINCE --a AUTHOR [-c CONTRIBUTORS_DB] [-t TEMPLATE] [-o OUTPUT_FILE] [-r REPOS_FILE] [-uv]
-    twir --token TOKEN --issue_number NUMBER --since SINCE --author AUTHOR [--contributors-db CONTRIBUTORS_DB] 
+    twir --token TOKEN --issue_number NUMBER --since SINCE --author AUTHOR [--contributors-db CONTRIBUTORS_DB]
         [--template TEMPLATE]
         [--output-file OUTPUT_FILE]
         [--repos-file REPOS_FILE]
@@ -250,7 +252,7 @@ OptionParser.new do |opts|
 
     DESCRIPTION
 
-    Connects to github and generates a Markdown file containing the constributions made to diverse
+    Connects to github and generates a Markdown file containing the contributions made to diverse
     Redox projects.
 
     OPTIONS
