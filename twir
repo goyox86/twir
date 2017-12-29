@@ -315,7 +315,7 @@ unless options[:access_token]
 end
 
 @client = Octokit::Client.new(access_token: options[:access_token])
-repos_file = File.open(DEFAULT_REPOS_FILE || options[:repos_file])
+repos_file = File.open(options[:repos_file] || DEFAULT_REPOS_FILE)
 unless repos_file
   puts "twir: missing repos file."
   exit(1)
@@ -338,7 +338,7 @@ unless options[:issue_number]
   exit(1)
 end
 
-template_file_path = DEFAULT_TEMPLATE_FILE || options[:template_file]
+template_file_path = options[:template_file] || DEFAULT_TEMPLATE_FILE
 unless template_file_path
   puts "twir: missing template file."
   exit(1)

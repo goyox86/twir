@@ -3,6 +3,8 @@
   :twir: true
 - :repo: redox-os/bootloader
   :twir: true
+- :repo: redox-os/book
+  :twir: true
 - :repo: redox-os/acid
   :twir: false
 - :repo: redox-os/binutils
@@ -20,7 +22,7 @@
 - :repo: redox-os/cookbook
   :twir: true
 - :repo: redox-os/libextra
-  :twir: false
+  :twir: true
 - :repo: redox-os/libpager
   :twir: false
 - :repo: redox-os/orbclient
@@ -32,7 +34,7 @@
 - :repo: redox-os/orbtk
   :twir: true
 - :repo: redox-os/orbutils
-  :twir: false
+  :twir: true
 - :repo: redox-os/pkgutils
   :twir: true
 - :repo: redox-os/orbterm
@@ -49,6 +51,8 @@
   :twir: true
 - :repo: redox-os/sodium
   :twir: true
+- :repo: redox-os/users
+  :twir: true
 - :repo: redox-os/userutils
   :twir: true
 - :repo: redox-os/coreutils
@@ -64,10 +68,8 @@
 - :repo: redox-os/newlib
   :twir: true
 - :repo: redox-os/extrautils
-  :twir: false
+  :twir: true
 - :repo: redox-os/book
-  :twir: false
+  :twir: true
 - :repo: redox-os/ptyd
-  :twir: false
-- :repo: redox-os/initd
-  :twir: false
+  :twir: true
